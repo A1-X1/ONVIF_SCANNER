@@ -1,0 +1,6 @@
+#ifndef ONVIF_SCANNER_LIBRARY_H
+#define ONVIF_SCANNER_LIBRARY_H
+
+void hello();
+
+#endif // ONVIF_SCANNER_LIBRARY_H
