@@ -17,7 +17,7 @@ int main() {
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
     // error handling
-    if (sock < 0) {
+    if (sock != 0) {
         perror("socket");
         return 1;
     }
@@ -31,7 +31,9 @@ int main() {
     local_addr.sin_port = 0;
 
     // check if can bind successfully and cast to sockaddr type
-    if (bind(sock, (sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
+    if (bind(sock, (sockaddr*)&local_addr, sizeof(local_addr)) != 0) {
+        // incase of error cleanup by closing the socket
+        close(sock);
         perror("bind");
         return 1;
     }
@@ -58,7 +60,17 @@ int main() {
         "</e:Body>"
         "</e:Envelope>";
 
+    sockaddr_in dest{};
+    dest.sin_family = AF_INET; // ipv4 again
+    // the default port used for WS Discovery on local netwoek
+    // also htons ensures that the code is portable due to architecture differences (big vs little endidan)
+    dest.sin_port = htons(3702);
+    std::string multicast_addr = "239.255.255.250";
+    inet_pton(AF_INET, multicast_addr.c_str(), &dest.sin_addr);
 
+
+
+    close(sock);
 
 
     return 0;
