@@ -9,6 +9,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "../include/onvif/discovery.h"
+
 int main() {
     // create the UDP socket
     // first param is for ipv4 since WS discovery is there
@@ -17,7 +19,7 @@ int main() {
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
     // error handling
-    if (sock != 0) {
+    if (sock < 0) {
         perror("socket");
         return 1;
     }
@@ -68,11 +70,49 @@ int main() {
     std::string multicast_addr = "239.255.255.250";
     inet_pton(AF_INET, multicast_addr.c_str(), &dest.sin_addr);
 
+    // sending the message out to the destination
+    ssize_t sent = sendto(sock, probe.c_str(), probe.size(), 0, (sockaddr*) &dest, sizeof(dest));
+
+    if (sent < 0) {
+        perror("sending err");
+        return 1;
+    }
+
+    printf("sent (%zd bytes): Listening for replies", sent);
+
+    char buffer[8192];
+    // c style api call thus we need to allocate memory beforehand
+    // subtract a byte from length for null terminator
+    while (true) {
+        sockaddr_in from{};
+        socklen_t from_len = sizeof(from);
+        ssize_t received = recvfrom(sock, buffer, sizeof(buffer) - 1, 0, (sockaddr*)&from, &from_len );
+
+        if (received < 0) {
+            printf("\nNo more responses (timeout).\n");
+            break;
+        }
+        buffer[received] = '\0';
+        // creating a variable to hold the ip address
+        char ip_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &from.sin_addr, ip_str, sizeof(ip_str));
+        printf("\n--- Reply from %s ---\n%s\n", ip_str, buffer);
+
+        // copies received into the buffer and creates a string called response, easier to work with than a buffer
+        std::string response(buffer, received);
+        auto devices = onvif::parseProbeMatch(response);
+        for (auto& device : devices) {
+            printf("Discovered device — XAddr: %s | Scopes: %s\n", device.xaddr.c_str(), device.scopes.c_str());
+        }
+
+
+
+    }
+
+
 
 
     close(sock);
-
-
     return 0;
 
 }
