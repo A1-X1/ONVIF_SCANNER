@@ -45,16 +45,6 @@ namespace onvif {
         // perform thr req
         CURLcode res = curl_easy_perform(curl);
 
-        // --- diagnostics ---
-        printf("curl_easy_perform result: %s\n", curl_easy_strerror(res));
-
-        long httpCode = 0;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-        printf("HTTP status code: %ld\n", httpCode);
-
-        printf("response.size() right after perform: %zu\n", response.size());
-        // --- end diagnostics ---
-
         if (res != CURLE_OK) {
             response.clear(); // treat failure as empty response
         }

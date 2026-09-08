@@ -32,6 +32,32 @@ namespace onvif {
         std::string name;
     };
 
+    class OnvifDevice {
+    public:
+        OnvifDevice(std::string xaddr, std::string scopes);
+
+        void setCredentials(const std::string& username, const std::string& password);
+
+        DeviceInformation getDeviceInformation() const;
+        Capabilities getCapabilities() const;
+        std::vector<MediaProfile> getProfiles() const;
+        std::string getStreamUri(const std::string& profileToken) const;
+
+        const std::string& xaddr() const { return xaddr_; }
+        const std::string& scopes() const { return scopes_; }
+
+    private:
+
+        Capabilities parseCapabilitiesResponse(const std::string& xml) const;
+
+        std::string embedCredentials(const std::string& uri) const;
+
+        std::string xaddr_;
+        std::string scopes_;
+        std::string username_;
+        std::string password_;
+    };
+
 
     DeviceInformation getDeviceInformation(const std::string& xaddr, const std::string& username, const std::string& password);
 

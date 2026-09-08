@@ -126,19 +126,6 @@ int main() {
 
             printf("Response (%zu bytes):\n%s\n", response2.size(), response2.c_str());
 
-            // Find where the first '\0' actually is, if any, inside the string's data
-            size_t firstNull = response2.find('\0');
-            if (firstNull != std::string::npos) {
-                printf("Found embedded null byte at position %zu\n", firstNull);
-            } else {
-                printf("No embedded null byte found\n");
-            }
-
-            // Print a safe, bounded slice from position 30 to 130, to see what's really there
-            if (response2.size() > 130) {
-                printf("Bytes 30-130: [%s]\n", response2.substr(30, 100).c_str());
-            }
-
             onvif::DeviceInformation info = onvif::getDeviceInformation(device.xaddr, "da.uptwn", "da.uptwn");
             printf("Manufacturer: %s\nModel: %s\nFirmware: %s\n",
                    info.manufacturer.c_str(), info.model.c_str(), info.firmwareVersion.c_str());

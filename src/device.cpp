@@ -10,113 +10,105 @@
 
 
 namespace onvif {
-    DeviceInformation getDeviceInformation(const std::string &xaddr, const std::string &username, const std::string &password) {
-        std::string securityHeader = buildSecurityHeader(username, password);
 
-        std::string body =
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-        "<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" "
-        "xmlns:tds=\"http://www.onvif.org/ver10/device/wsdl\">"
-        "<soap:Header>" + securityHeader + "</soap:Header>"
-        "<soap:Body>"
-        "<tds:GetDeviceInformation/>"
-        "</soap:Body>"
-        "</soap:Envelope>";
+    // std::move is for efficiency purposes
+    OnvifDevice::OnvifDevice(std::string xaddr, std::string scopes)
+    : xaddr_(std::move(xaddr)), scopes_(std::move(scopes)) {}
 
-        std::string response = sendSoapRequest(xaddr, body);
-
-        DeviceInformation deviceInfo;
-        pugi::xml_document doc;
-        if (!doc.load_string(response.c_str())) {
-            // returns empty in case of failure
-            return deviceInfo;
-        }
-
-        auto bodyNode = findChildIgnoringPrefix(doc.first_child(), "Body");
-        auto infoResponse = findChildIgnoringPrefix(bodyNode, "GetDeviceInformationResponse");
-
-        deviceInfo.manufacturer = findChildIgnoringPrefix(infoResponse, "Manufacturer").text().as_string();
-        deviceInfo.model = findChildIgnoringPrefix(infoResponse, "Model").text().as_string();
-        deviceInfo.firmwareVersion = findChildIgnoringPrefix(infoResponse, "FirmwareVersion").text().as_string();
-        deviceInfo.serialNumber = findChildIgnoringPrefix(infoResponse, "SerialNumber").text().as_string();
-        deviceInfo.hardwareId = findChildIgnoringPrefix(infoResponse, "HardwareId").text().as_string();
-
-        return deviceInfo;
-
+    void OnvifDevice::setCredentials(const std::string& username, const std::string& password) {
+        username_ = username;
+        password_ = password;
     }
 
-    Capabilities getCapabilities(const std::string &xaddr, const std::string &username, const std::string &password) {
-        std::string securityHeader = buildSecurityHeader(username, password);
+    DeviceInformation OnvifDevice::getDeviceInformation() const {
+        std::string securityHeader = buildSecurityHeader(username_, password_);
 
         std::string body =
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
             "<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" "
             "xmlns:tds=\"http://www.onvif.org/ver10/device/wsdl\">"
             "<soap:Header>" + securityHeader + "</soap:Header>"
-            "<soap:Body>"
-            "<tds:GetCapabilities><tds:Category>All</tds:Category></tds:GetCapabilities>"
-            "</soap:Body>"
+            "<soap:Body><tds:GetDeviceInformation/></soap:Body>"
             "</soap:Envelope>";
 
-        std::string response = sendSoapRequest(xaddr, body);
-        return parseCapabilities(response);
+        std::string response = sendSoapRequest(xaddr_, body);
+
+        DeviceInformation info;
+        pugi::xml_document doc;
+        if (!doc.load_string(response.c_str())) return info;
+
+        auto body_node = findChildIgnoringPrefix(doc.first_child(), "Body");
+        auto infoResponse = findChildIgnoringPrefix(body_node, "GetDeviceInformationResponse");
+
+        info.manufacturer = findChildIgnoringPrefix(infoResponse, "Manufacturer").text().as_string();
+        info.model = findChildIgnoringPrefix(infoResponse, "Model").text().as_string();
+        info.firmwareVersion = findChildIgnoringPrefix(infoResponse, "FirmwareVersion").text().as_string();
+        info.serialNumber = findChildIgnoringPrefix(infoResponse, "SerialNumber").text().as_string();
+        info.hardwareId = findChildIgnoringPrefix(infoResponse, "HardwareId").text().as_string();
+
+        return info;
     }
 
-    Capabilities parseCapabilities(const std::string &xml) {
+    // private helper func
+    Capabilities OnvifDevice::parseCapabilitiesResponse(const std::string& xml) const {
         Capabilities caps;
 
         pugi::xml_document doc;
-        if (!doc.load_string(xml.c_str())) {
-            return caps;
-        }
+        if (!doc.load_string(xml.c_str())) return caps;
 
-        auto body = findChildIgnoringPrefix(doc.first_child(), "Body");
-        auto response = findChildIgnoringPrefix(body, "GetCapabilitiesResponse");
-        auto capabilities = findChildIgnoringPrefix(response, "Capabilities");
+        auto body_node = findChildIgnoringPrefix(doc.first_child(), "Body");
+        auto capResponse = findChildIgnoringPrefix(body_node, "GetCapabilitiesResponse");
+        auto capabilities = findChildIgnoringPrefix(capResponse, "Capabilities");
 
-        auto device = findChildIgnoringPrefix(capabilities, "Device");
-        caps.deviceXAddr = findChildIgnoringPrefix(device, "XAddr").text().as_string();
-
-        auto media = findChildIgnoringPrefix(capabilities, "Media");
-        caps.mediaXAddr = findChildIgnoringPrefix(media, "XAddr").text().as_string();
-
-        auto ptz = findChildIgnoringPrefix(capabilities, "PTZ");
-        caps.ptzXAddr = findChildIgnoringPrefix(ptz, "XAddr").text().as_string();
-
-        auto events = findChildIgnoringPrefix(capabilities, "Events");
-        caps.eventsXAddr = findChildIgnoringPrefix(events, "XAddr").text().as_string();
+        caps.deviceXAddr = findChildIgnoringPrefix(findChildIgnoringPrefix(capabilities, "Device"), "XAddr").text().as_string();
+        caps.mediaXAddr = findChildIgnoringPrefix(findChildIgnoringPrefix(capabilities, "Media"), "XAddr").text().as_string();
+        caps.ptzXAddr = findChildIgnoringPrefix(findChildIgnoringPrefix(capabilities, "PTZ"), "XAddr").text().as_string();
+        caps.eventsXAddr = findChildIgnoringPrefix(findChildIgnoringPrefix(capabilities, "Events"), "XAddr").text().as_string();
 
         return caps;
     }
 
-    std::vector<MediaProfile> getProfiles(const std::string& mediaXAddr, const std::string& username, const std::string& password) {
+
+    Capabilities OnvifDevice::getCapabilities() const {
+        std::string securityHeader = buildSecurityHeader(username_, password_);
+
+        std::string body =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            "<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" "
+            "xmlns:tds=\"http://www.onvif.org/ver10/device/wsdl\">"
+            "<soap:Header>" + securityHeader + "</soap:Header>"
+            "<soap:Body><tds:GetCapabilities><tds:Category>All</tds:Category></tds:GetCapabilities></soap:Body>"
+            "</soap:Envelope>";
+
+        std::string response = sendSoapRequest(xaddr_, body);
+        return parseCapabilitiesResponse(response);
+    }
+
+
+    std::vector<MediaProfile> OnvifDevice::getProfiles() const {
         std::vector<MediaProfile> profiles;
 
-        std::string securityHeader = buildSecurityHeader(username, password);
+        Capabilities caps = getCapabilities();
+        std::string securityHeader = buildSecurityHeader(username_, password_);
+
         std::string body =
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
             "<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" "
             "xmlns:trt=\"http://www.onvif.org/ver10/media/wsdl\">"
             "<soap:Header>" + securityHeader + "</soap:Header>"
-            "<soap:Body>"
-            "<trt:GetProfiles/>"
-            "</soap:Body>"
+            "<soap:Body><trt:GetProfiles/></soap:Body>"
             "</soap:Envelope>";
 
-        std::string response = sendSoapRequest(mediaXAddr, body);
+        std::string response = sendSoapRequest(caps.mediaXAddr, body);
 
         pugi::xml_document doc;
-        if (!doc.load_string(response.c_str())) {
-            return profiles;
-        }
+        if (!doc.load_string(response.c_str())) return profiles;
 
-        auto responseBody = findChildIgnoringPrefix(doc.first_child(), "Body");
-        auto profilesResponse = findChildIgnoringPrefix(responseBody, "GetProfilesResponse");
+        auto body_node = findChildIgnoringPrefix(doc.first_child(), "Body");
+        auto profilesResponse = findChildIgnoringPrefix(body_node, "GetProfilesResponse");
 
-        // loops each profile listed
         for (auto profileNode : findChildrenIgnoringPrefix(profilesResponse, "Profiles")) {
             MediaProfile profile;
-            // token is an attribute
             profile.token = profileNode.attribute("token").as_string();
             profile.name = findChildIgnoringPrefix(profileNode, "Name").text().as_string();
             profiles.push_back(profile);
@@ -125,8 +117,20 @@ namespace onvif {
         return profiles;
     }
 
-    std::string getStreamUri(const std::string& mediaXAddr, const std::string& profileToken, const std::string& username, const std::string& password) {
-        std::string securityHeader = buildSecurityHeader(username, password);
+    // private helper func
+    std::string OnvifDevice::embedCredentials(const std::string& uri) const {
+        size_t schemeEnd = uri.find("://");
+        if (schemeEnd == std::string::npos) return uri;
+
+        std::string scheme = uri.substr(0, schemeEnd + 3);
+        std::string rest = uri.substr(schemeEnd + 3);
+
+        return scheme + username_ + ":" + password_ + "@" + rest;
+    }
+
+    std::string OnvifDevice::getStreamUri(const std::string& profileToken) const {
+        Capabilities caps = getCapabilities();
+        std::string securityHeader = buildSecurityHeader(username_, password_);
 
         std::string body =
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
@@ -136,39 +140,25 @@ namespace onvif {
             "<soap:Header>" + securityHeader + "</soap:Header>"
             "<soap:Body>"
             "<trt:GetStreamUri>"
-            "<trt:StreamSetup>"
-            "<tt:Stream>RTP-Unicast</tt:Stream>"
-            "<tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport>"
-            "</trt:StreamSetup>"
+            "<trt:StreamSetup><tt:Stream>RTP-Unicast</tt:Stream><tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport></trt:StreamSetup>"
             "<trt:ProfileToken>" + profileToken + "</trt:ProfileToken>"
             "</trt:GetStreamUri>"
             "</soap:Body>"
             "</soap:Envelope>";
 
-        std::string response = sendSoapRequest(mediaXAddr, body);
+        std::string response = sendSoapRequest(caps.mediaXAddr, body);
 
         pugi::xml_document doc;
-        if (!doc.load_string(response.c_str())) {
-            return "";
-        }
+        if (!doc.load_string(response.c_str())) return "";
 
-        auto responseBody = findChildIgnoringPrefix(doc.first_child(), "Body");
-        auto streamUriResponse = findChildIgnoringPrefix(responseBody, "GetStreamUriResponse");
-        auto mediaUri = findChildIgnoringPrefix(streamUriResponse, "MediaUri");
+        auto body_node = findChildIgnoringPrefix(doc.first_child(), "Body");
+        auto streamResponse = findChildIgnoringPrefix(body_node, "GetStreamUriResponse");
+        auto mediaUri = findChildIgnoringPrefix(streamResponse, "MediaUri");
 
-        return findChildIgnoringPrefix(mediaUri, "Uri").text().as_string();
-    }
+        std::string rawUri = findChildIgnoringPrefix(mediaUri, "Uri").text().as_string();
+        if (rawUri.empty()) return rawUri;
 
-    std::string addCredentialsToUri(const std::string& uri, const std::string& username, const std::string& password) {
-        size_t schemeEnd = uri.find("://");
-        if (schemeEnd == std::string::npos) {
-            return uri;
-        }
-
-        std::string scheme = uri.substr(0, schemeEnd + 3);
-        std::string rest = uri.substr(schemeEnd + 3);
-
-        return scheme + username + ":" + password + "@" + rest;
+        return embedCredentials(rawUri);
     }
 
 
