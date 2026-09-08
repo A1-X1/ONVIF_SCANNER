@@ -6,7 +6,6 @@
 #define ONVIF_SCANNER_DISCOVERY_H
 
 
-#include <pugixml.hpp>
 #include <string>
 #include <vector>
 

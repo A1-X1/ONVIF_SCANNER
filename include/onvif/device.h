@@ -6,6 +6,7 @@
 #define ONVIF_SCANNER_DEVICE_H
 
 #include <string>
+#include <vector>
 
 namespace onvif {
 
@@ -17,9 +18,32 @@ namespace onvif {
         std::string hardwareId;
     };
 
+    struct Capabilities {
+        std::string mediaXAddr;
+        std::string deviceXAddr;
+
+        // optional members (empty if dont have)
+        std::string ptzXAddr;
+        std::string eventsXAddr;
+    };
+
+    struct MediaProfile {
+        std::string token;
+        std::string name;
+    };
+
+
     DeviceInformation getDeviceInformation(const std::string& xaddr, const std::string& username, const std::string& password);
 
-    std::string getCapabilities(const std::string& xaddr, const std::string& username, const std::string& password);
+    Capabilities getCapabilities(const std::string& xaddr, const std::string& username, const std::string& password);
+
+    Capabilities parseCapabilities(const std::string& xml);
+
+    std::vector<MediaProfile> getProfiles(const std::string& mediaXAddr, const std::string& username, const std::string& password);
+
+    std::string getStreamUri(const std::string& mediaXAddr, const std::string& profileToken, const std::string& username, const std::string& password);
+
+    std::string addCredentialsToUri(const std::string& uri, const std::string& username, const std::string& password);
 
 
 }

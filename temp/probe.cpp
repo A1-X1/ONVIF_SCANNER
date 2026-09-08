@@ -14,6 +14,8 @@
 #include "onvif/soap_client.h"
 #include "onvif/ws_security.h"
 
+
+
 int main() {
     // create the UDP socket
     // first param is for ipv4 since WS discovery is there
@@ -141,16 +143,24 @@ int main() {
             printf("Manufacturer: %s\nModel: %s\nFirmware: %s\n",
                    info.manufacturer.c_str(), info.model.c_str(), info.firmwareVersion.c_str());
 
-            std::string caps = onvif::getCapabilities(device.xaddr, "da.uptwn", "da.uptwn");
-            FILE* f2 = fopen("/tmp/caps.xml", "w");
-            if (f2) { fwrite(caps.data(), 1, caps.size(), f2); fclose(f2); }
-
-            FILE* f = fopen("/tmp/response.xml", "w");
-            if (f) {
-                fwrite(response2.data(), 1, response2.size(), f);
-                fclose(f);
-                printf("Wrote response to /tmp/response.xml\n");
+            auto caps = onvif::getCapabilities(device.xaddr, "da.uptwn", "da.uptwn");
+            auto profiles = onvif::getProfiles(caps.mediaXAddr, "da.uptwn", "da.uptwn");
+            for (auto& p : profiles) {
+                printf("Profile — token: %s | name: %s\n", p.token.c_str(), p.name.c_str());
             }
+            std::string uri = onvif::getStreamUri(caps.mediaXAddr, profiles[0].token, "da.uptwn", "da.uptwn");
+            std::string finalOutput = onvif::addCredentialsToUri(uri, "da.uptwn", "da.uptwn");
+            printf("Final Stream URI: %s ", finalOutput.c_str());
+
+            // FILE* f2 = fopen("/tmp/caps.xml", "w");
+            // if (f2) { fwrite(caps.data(), 1, caps.size(), f2); fclose(f2); }
+            //
+            // FILE* f = fopen("/tmp/response.xml", "w");
+            // if (f) {
+            //     fwrite(response2.data(), 1, response2.size(), f);
+            //     fclose(f);
+            //     printf("Wrote response to /tmp/response.xml\n");
+            // }
 
         }
 
