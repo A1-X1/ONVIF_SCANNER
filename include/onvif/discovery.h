@@ -6,6 +6,7 @@
 #define ONVIF_SCANNER_DISCOVERY_H
 
 
+#include <pugixml.hpp>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,7 @@ namespace onvif {
         std::string xaddr;
         std::string scopes;
     };
+
 
     std::vector<DiscoveredDevice> parseProbeMatch(const std::string& xml);
 

@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "../include/onvif/discovery.h"
+#include "onvif/device.h"
 #include "onvif/soap_client.h"
 #include "onvif/ws_security.h"
 
@@ -135,6 +136,14 @@ int main() {
             if (response2.size() > 130) {
                 printf("Bytes 30-130: [%s]\n", response2.substr(30, 100).c_str());
             }
+
+            onvif::DeviceInformation info = onvif::getDeviceInformation(device.xaddr, "da.uptwn", "da.uptwn");
+            printf("Manufacturer: %s\nModel: %s\nFirmware: %s\n",
+                   info.manufacturer.c_str(), info.model.c_str(), info.firmwareVersion.c_str());
+
+            std::string caps = onvif::getCapabilities(device.xaddr, "da.uptwn", "da.uptwn");
+            FILE* f2 = fopen("/tmp/caps.xml", "w");
+            if (f2) { fwrite(caps.data(), 1, caps.size(), f2); fclose(f2); }
 
             FILE* f = fopen("/tmp/response.xml", "w");
             if (f) {

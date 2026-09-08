@@ -3,19 +3,11 @@
 //
 
 #include "onvif/discovery.h"
+#include "onvif/xml_utils.h"
 #include <pugixml.hpp>
 
-pugi::xml_node findChildIgnoringPrefix(pugi::xml_node parent, const std::string& localName) {
-    for (auto child : parent.children()) {
-        std::string name = child.name();
-        auto colonPos = name.find(':');
-        std::string tag = (colonPos == std::string::npos) ? name : name.substr(colonPos + 1);
-        if (tag == localName) {
-            return child;
-        }
-    }
-    return pugi::xml_node();
-}
+
+
 
 std::vector<onvif::DiscoveredDevice> onvif::parseProbeMatch(const std::string &xml) {
     std::vector<DiscoveredDevice> devices;
