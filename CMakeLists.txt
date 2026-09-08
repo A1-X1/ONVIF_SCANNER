@@ -7,7 +7,9 @@ find_package(OpenSSL REQUIRED)
 
 set(CMAKE_CXX_STANDARD 20)
 add_executable(probe temp/probe.cpp)
-add_executable(fake_camera temp/fake_camera.cpp)
+add_executable(fake_camera temp/fake_camera.cpp
+        include/onvif/soap_client.h
+        include/onvif/ws_security.h)
 
 add_library(ONVIF_SCANNER STATIC library.cpp
         include/onvif/scanner.h
@@ -17,7 +19,9 @@ add_library(ONVIF_SCANNER STATIC library.cpp
         src/device.cpp
         src/types.cpp
         src/scanner.cpp
-        src/discovery.cpp)
+        src/discovery.cpp
+        src/soap_client.cpp
+        src/ws_security.cpp)
 
 target_include_directories(ONVIF_SCANNER PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ONVIF_SCANNER PRIVATE pugixml::pugixml CURL::libcurl OpenSSL::SSL OpenSSL::Crypto)

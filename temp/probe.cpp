@@ -10,6 +10,8 @@
 #include <unistd.h>
 
 #include "../include/onvif/discovery.h"
+#include "onvif/soap_client.h"
+#include "onvif/ws_security.h"
 
 int main() {
     // create the UDP socket
@@ -103,7 +105,47 @@ int main() {
         auto devices = onvif::parseProbeMatch(response);
         for (auto& device : devices) {
             printf("Discovered device — XAddr: %s | Scopes: %s\n", device.xaddr.c_str(), device.scopes.c_str());
+
+            std::string securityHeader = onvif::buildSecurityHeader("da.uptwn", "da.uptwn");
+
+            std::string body =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            "<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" "
+            "xmlns:tds=\"http://www.onvif.org/ver10/device/wsdl\">"
+            "<soap:Header>" + securityHeader + "</soap:Header>"
+            "<soap:Body>"
+            "<tds:GetDeviceInformation/>"
+            "</soap:Body>"
+            "</soap:Envelope>";
+
+            std::string response2 = onvif::sendSoapRequest(
+                device.xaddr, body);
+
+            printf("Response (%zu bytes):\n%s\n", response2.size(), response2.c_str());
+
+            // Find where the first '\0' actually is, if any, inside the string's data
+            size_t firstNull = response2.find('\0');
+            if (firstNull != std::string::npos) {
+                printf("Found embedded null byte at position %zu\n", firstNull);
+            } else {
+                printf("No embedded null byte found\n");
+            }
+
+            // Print a safe, bounded slice from position 30 to 130, to see what's really there
+            if (response2.size() > 130) {
+                printf("Bytes 30-130: [%s]\n", response2.substr(30, 100).c_str());
+            }
+
+            FILE* f = fopen("/tmp/response.xml", "w");
+            if (f) {
+                fwrite(response2.data(), 1, response2.size(), f);
+                fclose(f);
+                printf("Wrote response to /tmp/response.xml\n");
+            }
+
         }
+
+
 
 
 
