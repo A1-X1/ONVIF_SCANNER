@@ -5,7 +5,7 @@
 #include "onvif/scanner.h"
 
 
-// example showing how it runs
+// example showing how it runs, using user and pass of the camera
 
 int main() {
     onvif::OnvifScanner scanner;
